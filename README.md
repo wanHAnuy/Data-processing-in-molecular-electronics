@@ -8,29 +8,33 @@
 > some code from:XMe_DataAnalysis
 >
 > https://github.com/Pilab-XMU/XMe_DataAnalysis
+>
+> Python 3.10 ,The package refer to requirements.txt
 
 
 # Multiple approach
-![PyDracula_Default_Dark](https://github.com/wanHAnuy/wanHAnuy/blob/main/fig1.png)
-
-
-# High DPI
-> Qt Widgets is an old technology and does not have a good support for high DPI settings, making these images look distorted when your system has DPI applied above 100%.
-You can minimize this problem using a workaround by applying this code below in "main.py" just below the import of the Qt modules.
-```python
-# ADJUST QT FONT DPI FOR HIGHT SCALE
-# ///////////////////////////////////////////////////////////////
-from modules import *
-from widgets import *
-os.environ["QT_FONT_DPI"] = "96"
+> The script invove 3 main data for STM-BJ,and we have developed various tpye ways for classing, clustering,drawing fig,and data processing.
+> 
+![the icon](https://github.com/wanHAnuy/wanHAnuy/blob/main/fig1.png)
+>
+> **OPEN MAIN PAGE**
+>
+> so fist, when you has prepared all files and environment,you can type that code on terminal to oackage it (about 150MB) or just run main.py to open:
+> 
 ```
+pyinstaller -F --icon=icon.ico main.py --hidden-import matplotlib.backends.backend_ps
+```
+![the main page](https://github.com/wanHAnuy/wanHAnuy/blob/main/fig2.png)
+
+# CLUSTER module
+Now let us introduce the fist module - CLUSTER!!
+> Default algorithm is the most effictive way to cluster. clink the butten cluster cacu, and you will look that parameter. 
 
 
-> **modules/resources_rc.py**: "resource.qrc" file compiled for python using the command: ```pyside6-rcc resources.qrc -o resources_rc.py```.
-
-> **modules/ui_functions.py**: add here only functions related to the user interface / GUI.
-
-**Malicious programs will not be added**!
-
-
-
+> Just clink open or drag the file(single_trance.npz/IV_data.npz) on the interface.
+> 
+> Such as Default algorithm module like that picture.
+>
+> We use Tailor & 1 D HIS + No dimensionality reduction(in fact the single 1d his data has been reducted by PCA).
+>
+>  if you want look the pre-data for cluster --Tailor & 1 D HIS,just clink single preview.
