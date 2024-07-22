@@ -3,15 +3,15 @@
 
 > The UI interface is created by Mr.Wanderson-Magalhaes, more detail please refer:
 >
->  https://github.com/Wanderson-Magalhaes/Modern_GUI_PyDracula_PySide6_or_PyQt6
+> https://github.com/Wanderson-Magalhaes/Modern_GUI_PyDracula_PySide6_or_PyQt6
 >
-> some sode from that project:XMe_DataAnalysis
+> some code from:XMe_DataAnalysis
 >
 > https://github.com/Pilab-XMU/XMe_DataAnalysis
 
 
-# Multiple Themes
-![PyDracula_Default_Dark](https://user-images.githubusercontent.com/60605512/112993874-0b647700-9140-11eb-8670-61322d70dbe3.png)
+# Multiple approach
+![PyDracula_Default_Dark](https://github.com/wanHAnuy/wanHAnuy/blob/main/fig1.png)
 
 
 # High DPI
