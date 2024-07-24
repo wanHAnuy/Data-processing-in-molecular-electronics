@@ -81,3 +81,40 @@ Merge save test
 ![merge_fig](https://github.com/wanHAnuy/wanHAnuy/blob/main/class%5B1%2C%203%5D_73.2%25.png)
 
 > the detail and data will save at same time!
+
+> if you want to use the script to cluster IV-scan data;
+>
+> just choice the button: IV mode
+> 
+> if you want use same label of clustering result to class other Homologous data,such as the IV-scan and the GV-scan;
+> 
+> just choice the button: 'finished once and want to use the class on other'
+
+# Subcection module
+
+![Subcection](https://github.com/wanHAnuy/wanHAnuy/blob/main/badb18e2fd0e63c676ec1d04a03975a.png)
+
+1. Redraw length figure
+>
+> both of the package of conductance and IV-scan, they all have 4 Parts:
+>
+> X_label(distance,voltage), Y_label(conductance,current),
+>
+> main feature(length , the conductance when junction fromed) and the point number of sample
+>
+> the length figure in conductance data package is correspond to the conductance when junction fromed in IV-scan data package
+>
+> now we just talk about the length figure
+>
+> such as the conductance peak value is 1e-5 GO,we setting the value of 'lenth value when conductance is /' to '-5' ,
+>
+> run and we get the length figure.
+>
+![ength figure](https://github.com/wanHAnuy/wanHAnuy/blob/main/class%5B1%2C%203%5D_73.2%25.png)
+
+
+2. Correlation analysis
+ 
+3. Split by time
+
+4. Split by time and clustering
