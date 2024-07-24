@@ -110,11 +110,40 @@ Merge save test
 >
 > run and we get the length figure.
 >
-![ength figure](https://github.com/wanHAnuy/wanHAnuy/blob/main/class%5B1%2C%203%5D_73.2%25.png)
-
+![length figure](https://github.com/wanHAnuy/wanHAnuy/blob/main/b33078cb140ccc8ac69a264289e7c4f.png)
 
 2. Correlation analysis
- 
+   
+> if you want to know the correlation about two different peaks or more peaks, you can try to use Correlation analysis
+>
+> just drag data package and run, and parameter of drawing is set in first page, and clink 'correlation run'
+
+![Correlation analysis figure](https://github.com/wanHAnuy/wanHAnuy/blob/main/4fd96138c9c4d8407aca120cebad6e3.png)
+
 3. Split by time
 
+> it is very importante to analyse the fluctuation of conductance in molecular junction about time
+> 
+> in a data package with 1000+ single curve, we can devide 5 little package with 200,so we set the 'the number of curves in each packet ' to 200;
+>
+> run and we get the figure.
+>
+> by the way, all the operation in our script, we can get the intact data and drawing by clink 'save'.
+>
+> the second figure meaning the mean square error, we can clink the 'merge save' to abandon the bad data.
+> 
+![separated_data](https://github.com/wanHAnuy/wanHAnuy/blob/main/separated_data.png)
+
+
+> and in this fingure we can observe the fluctuation of conductance in molecular junction about time
+![separated_data2](https://github.com/wanHAnuy/wanHAnuy/blob/main/c6ea08317ca86c695730258aba60c89.png)
+>
+> and we can analyse the fluctuation of length in molecular junction about time, just clink ''
+
+![separated_data3](https://github.com/wanHAnuy/wanHAnuy/blob/main/vfg.png)
 4. Split by time and clustering
+>
+> we can divide by time and cluster at sametime,just clink''
+![separated_data4](https://github.com/wanHAnuy/wanHAnuy/blob/main/separated_data_clustering.png)
+
+> # don't forget to change the max value of 2D histogram!(in page 1)
