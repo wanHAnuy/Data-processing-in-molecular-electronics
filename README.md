@@ -147,3 +147,12 @@ Merge save test
 ![separated_data4](https://github.com/wanHAnuy/wanHAnuy/blob/main/separated_data_clustering.png)
 
 > # don't forget to change the max value of 2D histogram!(in page 1)
+> # new applcation!!! updating time 2025 -2 -28
+> 1. CH SCAN! find the best number to cluster('cluster cacu'page)
+> 2. IV Clustering('cluster cacu'page)
+> 3. Merge saving('cluster cacu'page)
+> 4. 'length' subsection
+> 5. FN transform
+> 6. IV data processing:'tdms'-->'npz'
+> 7. IV data processing -- decapicity
+> 8. psd data processing
