@@ -31,7 +31,10 @@ from multiprocessing import freeze_support
 # 2. pyside6与pyqt5只能用一种
 # 3. pyside6-rcc resources.qrc -o resources_rc.py 更新图像
 # pyinstaller -F --icon=icon.ico main.py  # 调试
-# pyinstaller -F --icon=icon.ico main.py --hidden-import matplotlib.backends.backend_ps # 如果没有某一个包的话替换掉
+
+# pyinstaller -Fw --icon=icon.ico --hidden-import=matplotlib.backends.backend_ps main.py  # !!!!!打包代码
+
+# 如果没有某一个包的话替换掉
 # 4. 打包 pyinstaller -Fw --icon=icon.ico main.py  # 推荐无终端版本
 #        pyinstaller -Fw --icon=icon.ico main.py -D
 #        增加图像在resources.qrc中添加并更新，注意格式
@@ -50,6 +53,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         # 初始化变量
+
         variables = [
             "divide_pic_peak", "hist_2d_data_peak", "image_path_2d_peak", "sorted_indices",
             "label", "redline", "hist_2d_data", "image_path_2d", "cluster_num_scan",
@@ -60,7 +64,8 @@ class MainWindow(QMainWindow):
             "peak_run_data", "merged_image", "draw_mix_cluster", "divide_data", "data_save",
             "Primitive_data", "values", "object_data_iv_y", "object_data_iv_x", "his_Reve",
             "ch_score", "images", "datas", "his_data", "single_spin", "divide_pic", "Draw_iv_his_path",
-            "meanCond_sourceFor_list", "meanCond_sourceReve_list"
+            "meanCond_sourceFor_list", "meanCond_sourceReve_list", "list_integPSD", "list_gMean",
+            "single_cut_png_path", "integPSD_png_path", "list_minN_png_path","conductance_fn_mean"
         ]
 
         # 使用循环将所有变量初始化为 None
@@ -109,6 +114,7 @@ class MainWindow(QMainWindow):
         widgets.btn_new.clicked.connect(self.buttonClick)
         widgets.btn_save.clicked.connect(self.buttonClick)
         widgets.btn_iv.clicked.connect(self.buttonClick)
+        widgets.btn_psd.clicked.connect(self.buttonClick)
 
         # EXTRA LEFT BOX
         def openCloseLeftBox():
@@ -133,7 +139,7 @@ class MainWindow(QMainWindow):
         # SET HOME PAGE AND SELECT MENU
         # ///////////////////////////////////////////////////////////////
         widgets.stackedWidget.setCurrentWidget(widgets.home)
-        widgets.btn_home.setStyleSheet(UIFunctions.selectMenu(widgets.btn_home.styleSheet()))
+
         icon = QIcon(':images/images/images/PyDracula.png')  # 替换为您的图标文件路径
         self.setWindowIcon(icon)  # 设置任务栏图标
         nf.make_forder()  # 新建存图文件夹
@@ -170,6 +176,11 @@ class MainWindow(QMainWindow):
             self.ui.Single_pre_iv: self.iv_single_run,
             self.ui.pushButton_5: self.abs_sort,
             self.ui.Stable_sort_mean: self.stable_sort,
+            self.ui.open_file_button_5: self.open_file_button_clicked,
+            self.ui.Show_N_list: self.Show_N_list,
+            self.ui.pushButton_7: self.Show_psd_list,
+            self.ui.pushButton_4: self.pre_single_cut,
+            self.ui.pushButton_6: self.psd_save,
         }
 
         for button, slot in button_slots.items():
@@ -181,17 +192,19 @@ class MainWindow(QMainWindow):
             self.ui.spinBox, self.ui.spinBox_2, self.ui.spinBox_3,
             self.ui.spinBox_4, self.ui.spinBox_5, self.ui.spinBox_6,
             self.ui.spinBox_7, self.ui.spinBox_8, self.ui.spinBox_9,
-            self.ui.spinBox_10
+            self.ui.spinBox_10, self.ui.spinBox_11, self.ui.spinBox_12, self.ui.spinBox_13,
+            self.ui.spinBox_14, self.ui.spinBox_15, self.ui.spinBox_16,
         ]
 
         for spin_box in spin_boxes:
             spin_box.setStyleSheet("QSpinBox { border: 1px solid rgb(53, 57, 63); }")
 
         self.ui.doubleSpinBox.setStyleSheet("QDoubleSpinBox { border: 1px solid rgb(53, 57, 63); }")
-        for i in range(3, 15):
+        self.ui.doubleSpinBox_16.setStyleSheet("QDoubleSpinBox { border: 1px solid rgb(53, 57, 63); }")
+        for i in range(2, 15):
             getattr(self.ui, f"doubleSpinBox_{i}").setStyleSheet(
                 "QDoubleSpinBox { border: 1px solid rgb(53, 57, 63); }")
-
+        widgets.btn_home.setStyleSheet(UIFunctions.selectMenu(widgets.btn_home.styleSheet()))  # 默认HOME页面亮起
         # 连接 stateChanged 信号到槽函数
         self.ui.ivMode.stateChanged.connect(self.iv_checkbox_state_changed)
         self.ui.checkBox.stateChanged.connect(self.label_checkbox_state_changed)
@@ -200,6 +213,7 @@ class MainWindow(QMainWindow):
         nf.set_progressbar_style(self.ui.progressBar_3, 4)
         nf.set_progressbar_style(self.ui.progressBar_4, 20)
         nf.set_progressbar_style(self.ui.progressBar_5, 20)
+        nf.set_progressbar_style(self.ui.progressBar_6, 20)
 
     def label_checkbox_state_changed(self):
         if self.ui.checkBox.isChecked():
@@ -233,7 +247,7 @@ class MainWindow(QMainWindow):
             self.ui.lineEdit_15.setText("-2")
             self.ui.lineEdit_19.setText("2")
 
-            self.ui.red_set.setValue(50)
+            self.ui.red_set.setValue(200)
         else:
             self.ui.comboBox_2.setCurrentIndex(2)
             self.ui.lineEdit_6.setText("-6.5")
@@ -256,6 +270,7 @@ class MainWindow(QMainWindow):
             self.ui.lineEdit.setText(str(files[0]))
             self.ui.lineEdit_3.setText(str(files[0]))
             self.ui.lineEdit_4.setText(str(files[0]))
+            self.ui.lineEdit_17.setText(str(files[0]))
             self.file_path = str(files[0])
 
     def open_file2_button_clicked(self):
@@ -283,28 +298,39 @@ class MainWindow(QMainWindow):
         # SHOW HOME PAGE
         if btnName == "btn_home":
             widgets.stackedWidget.setCurrentWidget(widgets.home)
+            widgets.btn_home.setStyleSheet(UIFunctions.selectMenu(widgets.btn_home.styleSheet()))
             UIFunctions.resetStyle(self, btnName)
             # btn.setStyleSheet(UIFunctions.selectMenu(btn.styleSheet()))
 
         # SHOW WIDGETS PAGE
         if btnName == "btn_widgets":
             widgets.stackedWidget.setCurrentWidget(widgets.widgets)
+            widgets.btn_widgets.setStyleSheet(UIFunctions.selectMenu(widgets.btn_widgets.styleSheet()))
             UIFunctions.resetStyle(self, btnName)
             # btn.setStyleSheet(UIFunctions.selectMenu(btn.styleSheet()))
 
         # SHOW NEW PAGE
         if btnName == "btn_new":
             widgets.stackedWidget.setCurrentWidget(widgets.new_page)  # SET PAGE
+            widgets.btn_new.setStyleSheet(UIFunctions.selectMenu(widgets.btn_new.styleSheet()))
             UIFunctions.resetStyle(self, btnName)  # RESET ANOTHERS BUTTONS SELECTED
             # btn.setStyleSheet(UIFunctions.selectMenu(btn.styleSheet()))  # SELECT MENU
 
         if btnName == "btn_save":
             widgets.stackedWidget.setCurrentWidget(widgets.dl_page)  # SET PAGE
+            widgets.btn_save.setStyleSheet(UIFunctions.selectMenu(widgets.btn_save.styleSheet()))
             UIFunctions.resetStyle(self, btnName)  # RESET ANOTHERS BUTTONS SELECTED
             print("Save BTN clicked!")
 
         if btnName == "btn_iv":
             widgets.stackedWidget.setCurrentWidget(widgets.IV_page)  # SET PAGE
+            widgets.btn_iv.setStyleSheet(UIFunctions.selectMenu(widgets.btn_iv.styleSheet()))
+            UIFunctions.resetStyle(self, btnName)  # RESET ANOTHERS BUTTONS SELECTED
+            print("Save BTN clicked!")
+
+        if btnName == "btn_psd":
+            widgets.stackedWidget.setCurrentWidget(widgets.psd_page)  # SET PAGE
+            widgets.btn_psd.setStyleSheet(UIFunctions.selectMenu(widgets.btn_psd.styleSheet()))
             UIFunctions.resetStyle(self, btnName)  # RESET ANOTHERS BUTTONS SELECTED
             print("Save BTN clicked!")
 
@@ -349,6 +375,7 @@ class MainWindow(QMainWindow):
                 self.ui.lineEdit_3.setText(file_path)
                 self.ui.lineEdit_4.setText(file_path)
                 self.ui.lineEdit_iv.setText(file_path)
+                self.ui.lineEdit_17.setText(file_path)
                 self.file_path = file_path
 
     def initUI(self, lbl, pic):
@@ -804,40 +831,40 @@ class MainWindow(QMainWindow):
 
                 # 在该文件夹中保存反扫数据.npz
 
-            if self.Draw_iv_his_path:  # 保存1dhis图像以及数据  # self.iv_his_data  = [1d_edge,1d_hist, his2d_edg_list, hist]  +Chose_data
-                folder_path = self.savefig(new_folder_name=f'{Chose_data}_Draw_iv_his',
-                                           temp_fig_path=self.Draw_iv_his_path)
-                name_txt = [f'{Chose_data}_1d_edge', f'{Chose_data}_1d_hist', f'{Chose_data}_his2d_edg_list',
-                            f'{Chose_data}_hist']
-                save_path_con = os.path.join(folder_path, f'{name_txt[1]}.txt')
-                with open(save_path_con, 'w') as file:
-                    for item in self.iv_his_data[1]:
-                        line = f'{item[0]:<20}\t{item[1]:<20}\n'  # 使用格式化操作对齐每个元素
-                        file.write(line)
-
-                save_path_redLine_path = os.path.join(folder_path, f'meanLine.txt')
-                with open(save_path_redLine_path, 'w') as file:
-                    for i in range(len(self.redline[0])):
-                        line = f'{self.redline[0][i]:<20}\t{self.redline[1][i]:<20}\n'  # 使用格式化操作对齐每个元素
-                        file.write(line)
-                base_data_hist_logI_path = os.path.join(folder_path, f'{name_txt[3]}.txt')
-                base_data_edg_logI_path = os.path.join(folder_path, f'{name_txt[2]}.txt')
-                nf.save_data_iv(histX=self.iv_his_data[3],
-                                hist_pathX=base_data_hist_logI_path, listX=self.iv_his_data[2],
-                                list_pathX=base_data_edg_logI_path)
-
-            if self.merged_iv_cluster_image_path:  # self.hist_class=hist_class.append([his2d_edg_list, hist]) + Chose_data
-                folder_path = self.savefig(new_folder_name=f'{Chose_data}_iv_cluster',
-                                           temp_fig_path=self.merged_iv_cluster_image_path)
-                for i in range(len(self.hist_class)):
-                    base_data_hist_logI_path = os.path.join(folder_path, f'{Chose_data}_hist_class_{i + 1}.txt')
-                    base_data_edg_logI_path = os.path.join(folder_path, f'{Chose_data}_edg_class_{i + 1}.txt')
-                    nf.save_data_iv(histX=self.hist_class[i][1],
-                                    hist_pathX=base_data_hist_logI_path, listX=self.hist_class[i][0],
-                                    list_pathX=base_data_edg_logI_path)
-
-            if self.single_fig_path:
-                self.savefig(new_folder_name='single_fig', temp_fig_path=self.single_fig_path)
+        # if self.Draw_iv_his_path:  # 保存1dhis图像以及数据  # self.iv_his_data  = [1d_edge,1d_hist, his2d_edg_list, hist]  +Chose_data
+        #     folder_path = self.savefig(new_folder_name=f'{Chose_data}_Draw_iv_his',
+        #                                temp_fig_path=self.Draw_iv_his_path)
+        #     name_txt = [f'{Chose_data}_1d_edge', f'{Chose_data}_1d_hist', f'{Chose_data}_his2d_edg_list',
+        #                 f'{Chose_data}_hist']
+        #     save_path_con = os.path.join(folder_path, f'{name_txt[1]}.txt')
+        #     with open(save_path_con, 'w') as file:
+        #         for item in self.iv_his_data[1]:
+        #             line = f'{item[0]:<20}\t{item[1]:<20}\n'  # 使用格式化操作对齐每个元素
+        #             file.write(line)
+        #
+        #     save_path_redLine_path = os.path.join(folder_path, f'meanLine.txt')
+        #     with open(save_path_redLine_path, 'w') as file:
+        #         for i in range(len(self.redline[0])):
+        #             line = f'{self.redline[0][i]:<20}\t{self.redline[1][i]:<20}\n'  # 使用格式化操作对齐每个元素
+        #             file.write(line)
+        #     base_data_hist_logI_path = os.path.join(folder_path, f'{name_txt[3]}.txt')
+        #     base_data_edg_logI_path = os.path.join(folder_path, f'{name_txt[2]}.txt')
+        #     nf.save_data_iv(histX=self.iv_his_data[3],
+        #                     hist_pathX=base_data_hist_logI_path, listX=self.iv_his_data[2],
+        #                     list_pathX=base_data_edg_logI_path)
+        #
+        # if self.merged_iv_cluster_image_path:  # self.hist_class=hist_class.append([his2d_edg_list, hist]) + Chose_data
+        #     folder_path = self.savefig(new_folder_name=f'{Chose_data}_iv_cluster',
+        #                                temp_fig_path=self.merged_iv_cluster_image_path)
+        #     for i in range(len(self.hist_class)):
+        #         base_data_hist_logI_path = os.path.join(folder_path, f'{Chose_data}_hist_class_{i + 1}.txt')
+        #         base_data_edg_logI_path = os.path.join(folder_path, f'{Chose_data}_edg_class_{i + 1}.txt')
+        #         nf.save_data_iv(histX=self.hist_class[i][1],
+        #                         hist_pathX=base_data_hist_logI_path, listX=self.hist_class[i][0],
+        #                         list_pathX=base_data_edg_logI_path)
+        #
+        # if self.single_fig_path:
+        #     self.savefig(new_folder_name='single_fig', temp_fig_path=self.single_fig_path)
             self.ui.progressBar_5.setValue(100)
             cacu.signal_window('successfully saved!!')
             self.showNormal()
@@ -901,7 +928,9 @@ class MainWindow(QMainWindow):
             plt.savefig(image_path)
             self.initUI(self.ui.label_sub, image_path)
             self.peak_pic = image_path
-            # self.peak_run_data = len_his_list
+            self.peak_run_data = his
+            hist, bin_edges = np.histogram(his, bins=bins_1Dlen, range=[his_1d_dis_0, his_1d_dis_1])
+            self.peak_run_his =[hist, bin_edges]
             self.ui.progressBar_3.setValue(100)
             cacu.signal_window('ok')
         else:
@@ -1088,9 +1117,96 @@ class MainWindow(QMainWindow):
         self.correlation = False
 
     def stable_sort(self):
-        self.the_abs = False
-        self.abs_sort()
-        self.the_abs = True
+        self.ui.label_42.clear()
+        self.ui.progressBar_4.setValue(0)
+        if self.file_path != "":
+            plt.close('all')
+            data = np.load(self.file_path)
+            conductance = data['conductance_array']
+            distance = data['distance_array']
+            i = self.ui.spinBox.value()
+            # 原始单个曲线
+            self.distance_i = distance[i]
+            self.conductance_i = conductance[i]
+            # 原始的单个曲线的线性电导
+            self.conductance_new = 10 ** conductance[i] * distance[i] / np.abs(distance[i])
+            # 原始单个曲线的FN x lim= -20 20
+            self.conductance_fn = np.log(abs(self.conductance_new) / (distance[i] ** 2))  # Corrected V**2
+            self.distance_new = 1 / distance[i]
+            # 求均值
+            self.conductance_mean = np.mean(conductance, axis=0)
+            # 求线性
+            self.conductance_mean_new = 10 ** self.conductance_mean * distance[i] / np.abs(distance[i])
+            #求fn
+            self.conductance_fn_mean = np.log(abs(self.conductance_mean_new) / (distance[i] ** 2))  # Corrected V**2
+
+            # 创建 2 行 3 列子图
+            fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+            axes = axes.ravel()  # 将子图数组展平成一维数组以便迭代访问
+
+            # 子图 1: 原始单个曲线 (distance vs. conductance)
+            axes[0].plot(self.distance_i, self.conductance_i, label='Raw Conductance Curve', color='blue')
+            axes[0].set_title('Raw Single Curve')
+            axes[0].set_xlabel('Distance')
+            axes[0].set_ylabel('Conductance')
+            axes[0].legend()
+            axes[0].grid(True)
+
+            # 子图 2: 原始单个曲线的线性电导
+            axes[1].plot(self.distance_i, self.conductance_new, label='Linear Conductance', color='green')
+            axes[1].set_title('Linear Conductance (Single)')
+            axes[1].set_xlabel('Distance')
+            axes[1].set_ylabel('Linear Conductance')
+            axes[1].legend()
+            axes[1].grid(True)
+
+            # 子图 3: 原始单个曲线的 FN 图 (只连接 lim 内点)
+            xlim_min, xlim_max = -20, 20
+
+            axes[2].scatter(self.distance_new, self.conductance_fn, color='red', label='FN Points')
+            axes[2].set_xlim(xlim_min, xlim_max)
+            axes[2].set_title('FN Plot (Single)')
+            axes[2].set_xlabel('1/V')
+            axes[2].set_ylabel('ln(I/V^2)')
+            axes[2].legend()
+            axes[2].grid(True)
+
+            # 子图 4: 均值曲线 (distance vs. conductance_mean)
+            axes[3].plot(self.distance_i, self.conductance_mean, label='Mean Conductance Curve', color='purple')
+            axes[3].set_title('Mean Curve')
+            axes[3].set_xlabel('voltage')
+            axes[3].set_ylabel('Conductance')
+            axes[3].legend()
+            axes[3].grid(True)
+
+            # 子图 5: 均值的线性电导
+            axes[4].plot(self.distance_i,  self.conductance_mean_new, label='Linear Conductance (Mean)', color='orange')
+            axes[4].set_title('Linear Conductance (Mean)')
+            axes[4].set_xlabel('voltage')
+            axes[4].set_ylabel('Linear Conductance')
+            axes[4].legend()
+            axes[4].grid(True)
+
+            # 子图 6: 均值的 FN 图 (只连接 lim 内点)
+            axes[5].scatter(self.distance_new,  self.conductance_fn_mean, color='red', label='FN Mean Points')
+            axes[5].set_xlim(xlim_min, xlim_max)
+            axes[5].set_title('FN Plot (Mean)')
+            axes[5].set_xlabel('1/V')
+            axes[5].set_ylabel('ln(I/V^2)')
+            axes[5].legend()
+            axes[5].grid(True)
+
+            # 调整布局
+            plt.tight_layout()
+
+            folder_name = "png_images"
+            self.FN_image_path = os.path.join(folder_name, f'FN.png')
+
+            plt.savefig(self.FN_image_path, dpi=100)
+
+            self.initUI(self.ui.label_42, self.FN_image_path)
+            self.ui.progressBar_4.setValue(100)
+
 
     def abs_sort(self):
         self.ui.label_42.clear()
@@ -1145,7 +1261,7 @@ class MainWindow(QMainWindow):
             # 对图表所有的参数进行读取与定义
             single_1d_his_bin = int(self.ui.lineEdit_18.text())
             single_2d_his_bin = single_1d_his_bin
-            print(single_1d_his_bin)
+
             low_cut_length = float(self.ui.lineEdit_14.text())
             high_cut_length = float(self.ui.lineEdit_16.text())
             low_cut_conductance = float(self.ui.lineEdit_15.text())
@@ -1317,9 +1433,17 @@ class MainWindow(QMainWindow):
                 result_path = os.path.join(cov_data_folder, 'peak_result.txt')
                 with open(result_path, 'w') as file:
                     for item in result:
-                        formatted_item0 = '%.2f' % item[0]  # 将 item[0] 保留两位小数
-                        line = f'{formatted_item0:<10}\t{item[1]:<10}\n'
+                        line = f'{item:<10}\n'
                         file.write(line)
+                # 存his
+                hist, bin_edges = self.peak_run_his
+                his_txt_path = os.path.join(cov_data_folder, 'his.txt')
+
+                with open(his_txt_path, 'w') as file:
+                    for i in range(len(hist)):
+                        line = f'{bin_edges[i]}\t{hist[i]}\n'  # 使用制表符分隔
+                        file.write(line)
+
             self.ui.progressBar_3.setValue(100)
             cacu.signal_window('successfully saved!!')
             self.showNormal()
@@ -1385,6 +1509,7 @@ class MainWindow(QMainWindow):
                                                                                color_2d=self.ui.color_style_2d.currentText(),
                                                                                red=self.ui.red_set.value(),
                                                                                file_path2=self.file_path)
+
 
             self.initUI(self.ui.label_sub, self.divide_pic_peak)
             self.ui.progressBar_3.setValue(100)
@@ -1500,94 +1625,132 @@ class MainWindow(QMainWindow):
         self.showMinimized()
         file_path = self.file_path
         folder_path = os.path.dirname(file_path)  # 提取single trance所在路径
-        if self.single_find_datas is not None:
-            self.ui.progressBar_4.setValue(0)
-            datas = self.single_find_datas
-            # 保存图片至folder_path/fig文件夹，保存数据至folder_path/data文件夹
-            his_data = self.single_run_image_his_data
-            # 创建"kmeans"文件夹
-            kmeans_folder = os.path.join(folder_path, 'find_or_denoise')
-            os.makedirs(kmeans_folder, exist_ok=True)
+        if self.file_path != "":
 
-            # 保存分类结果
-            for i in range(3):
-                # 创建类别文件夹
-                class_folder_i = os.path.join(kmeans_folder, f'class_{i}')
-                # 确保保存文件夹存在
-                os.makedirs(class_folder_i, exist_ok=True)
-                file_path = self.single_run_image[i]
-                save_path = os.path.join(class_folder_i, f'image_{i}.png')
+            if self.single_find_datas is not None:
+                self.ui.progressBar_4.setValue(0)
+                datas = self.single_find_datas
+                # 保存图片至folder_path/fig文件夹，保存数据至folder_path/data文件夹
+                his_data = self.single_run_image_his_data
+                # 创建"kmeans"文件夹
+                kmeans_folder = os.path.join(folder_path, 'find_or_denoise')
+                os.makedirs(kmeans_folder, exist_ok=True)
+
+                # 保存分类结果
+                for i in range(3):
+                    # 创建类别文件夹
+                    class_folder_i = os.path.join(kmeans_folder, f'class_{i}')
+                    # 确保保存文件夹存在
+                    os.makedirs(class_folder_i, exist_ok=True)
+                    file_path = self.single_run_image[i]
+                    save_path = os.path.join(class_folder_i, f'image_{i}.png')
+                    # 打开图像文件
+                    image = Image.open(file_path)
+                    # 保存图像到指定路径
+                    image.save(save_path)
+                    # 保存直方图
+                    save_path_con = os.path.join(class_folder_i, f'con_1d_his_{i}.txt')
+                    save_path_len = os.path.join(class_folder_i, f'len_1d_his_{i}.txt')
+                    save_path_2d_edges = os.path.join(class_folder_i, f'save_path_2d_edges_{i}.txt')
+                    save_path_2d_hist = os.path.join(class_folder_i, f'save_path_2d_hist_{i}.txt')
+
+                    data = [his_data[0][i], his_data[1][i], his_data[2][i], his_data[3][i]]
+                    path = [save_path_con, save_path_len, save_path_2d_edges, save_path_2d_hist]
+                    cacu.save_data(data, path)
+
+                    # 保存single_trance
+                    if i != 0:
+                        save_path = os.path.join(class_folder_i, 'single_trance.npz')
+                        np.savez(save_path, distance_array=datas[0][i - 1], conductance_array=datas[1][i - 1],
+                                 length_array=datas[2][i - 1], additional_length=len(datas[2][i - 1]))
+                # 保存合并图
+                image_merged = Image.open(self.single_find_merge_image)
+                image_merged_path = os.path.join(kmeans_folder, 'merged_image.png')
+                image_merged.save(image_merged_path)
+
+            if self.Draw_iv_his_path:  # 保存1dhis图像以及数据  # self.iv_his_data  = [1d_edge,1d_hist, his2d_edg_list, hist]  +Chose_data
+                Chose_data = "sort_data"
+                folder_path_2 = os.path.join(folder_path, 'sort_data')
+                os.makedirs(folder_path_2, exist_ok=True)
+
+                # 文件路径 保存路径
+                file_path = self.Draw_iv_his_path
+                save_path = os.path.join(folder_path_2, 'Source_figure.png')
                 # 打开图像文件
                 image = Image.open(file_path)
                 # 保存图像到指定路径
                 image.save(save_path)
-                # 保存直方图
-                save_path_con = os.path.join(class_folder_i, f'con_1d_his_{i}.txt')
-                save_path_len = os.path.join(class_folder_i, f'len_1d_his_{i}.txt')
-                save_path_2d_edges = os.path.join(class_folder_i, f'save_path_2d_edges_{i}.txt')
-                save_path_2d_hist = os.path.join(class_folder_i, f'save_path_2d_hist_{i}.txt')
 
-                data = [his_data[0][i], his_data[1][i], his_data[2][i], his_data[3][i]]
-                path = [save_path_con, save_path_len, save_path_2d_edges, save_path_2d_hist]
-                cacu.save_data(data, path)
+                name_txt = [f'{Chose_data}_1d_edge', f'{Chose_data}_1d_hist', f'{Chose_data}_his2d_edg_list',
+                            f'{Chose_data}_hist']
+                save_path_con = os.path.join(folder_path_2, f'{name_txt[1]}.txt')
+                with open(save_path_con, 'w') as file:
+                    for item in self.iv_his_data[1]:
+                        line = f'{item[0]:<20}\t{item[1]:<20}\n'  # 使用格式化操作对齐每个元素
+                        file.write(line)
+
+                save_path_redLine_path = os.path.join(folder_path_2, f'meanLine.txt')
+                with open(save_path_redLine_path, 'w') as file:
+                    for i in range(len(self.redline[0])):
+                        line = f'{self.redline[0][i]:<20}\t{self.redline[1][i]:<20}\n'  # 使用格式化操作对齐每个元素
+                        file.write(line)
+                base_data_hist_logI_path = os.path.join(folder_path_2, f'{name_txt[3]}.txt')
+                base_data_edg_logI_path = os.path.join(folder_path_2, f'{name_txt[2]}.txt')
+                nf.save_data_iv(histX=self.iv_his_data[3],
+                                hist_pathX=base_data_hist_logI_path, listX=self.iv_his_data[2],
+                                list_pathX=base_data_edg_logI_path)
+
+                data = np.load(self.file_path)
+                object_data_y = np.array(data['conductance_array'])
+                object_data_x = np.array(data['distance_array'])
+
+                # # 保存一下绘制误差棒的数据
+                # save_path_err = os.path.join(folder_path_2, 'err_bar.txt')
+                # # 将数组写入文本文件
+                # np.savetxt(save_path_err, object_data_y, fmt='%d', delimiter='\n')
 
                 # 保存single_trance
-                if i != 0:
-                    save_path = os.path.join(class_folder_i, 'single_trance.npz')
-                    np.savez(save_path, distance_array=datas[0][i - 1], conductance_array=datas[1][i - 1],
-                             length_array=datas[2][i - 1], additional_length=len(datas[2][i - 1]))
-            # 保存合并图
-            image_merged = Image.open(self.single_find_merge_image)
-            image_merged_path = os.path.join(kmeans_folder, 'merged_image.png')
-            image_merged.save(image_merged_path)
+                save_path = os.path.join(folder_path_2, 'single_trance.npz')
 
-        if self.Draw_iv_his_path:  # 保存1dhis图像以及数据  # self.iv_his_data  = [1d_edge,1d_hist, his2d_edg_list, hist]  +Chose_data
-            Chose_data = "sort_data"
-            folder_path_2 = os.path.join(folder_path, 'sort_data')
-            os.makedirs(folder_path_2, exist_ok=True)
+                np.savez(save_path, distance_array=object_data_x[self.sorted_indices],
+                         conductance_array=object_data_y[self.sorted_indices],
+                         length_array=data['length_array'], additional_length=len(object_data_x))
 
-            # 文件路径 保存路径
-            file_path = self.Draw_iv_his_path
-            save_path = os.path.join(folder_path_2, 'Source_figure.png')
-            # 打开图像文件
-            image = Image.open(file_path)
-            # 保存图像到指定路径
-            image.save(save_path)
+            if self.conductance_fn_mean is not None:
+                # 创建保存数据的文件夹
+                folder_path_FN = os.path.join(folder_path, 'fn_TEST')
+                os.makedirs(folder_path_FN, exist_ok=True)
 
-            name_txt = [f'{Chose_data}_1d_edge', f'{Chose_data}_1d_hist', f'{Chose_data}_his2d_edg_list',
-                        f'{Chose_data}_hist']
-            save_path_con = os.path.join(folder_path_2, f'{name_txt[1]}.txt')
-            with open(save_path_con, 'w') as file:
-                for item in self.iv_his_data[1]:
-                    line = f'{item[0]:<20}\t{item[1]:<20}\n'  # 使用格式化操作对齐每个元素
-                    file.write(line)
+                single_folder = os.path.join(folder_path_FN, 'single_curve_data')
+                mean_folder = os.path.join(folder_path_FN, 'mean_curve_data')
+                os.makedirs(single_folder, exist_ok=True)
+                os.makedirs(mean_folder, exist_ok=True)
 
-            save_path_redLine_path = os.path.join(folder_path_2, f'meanLine.txt')
-            with open(save_path_redLine_path, 'w') as file:
-                for i in range(len(self.redline[0])):
-                    line = f'{self.redline[0][i]:<20}\t{self.redline[1][i]:<20}\n'  # 使用格式化操作对齐每个元素
-                    file.write(line)
-            base_data_hist_logI_path = os.path.join(folder_path_2, f'{name_txt[3]}.txt')
-            base_data_edg_logI_path = os.path.join(folder_path_2, f'{name_txt[2]}.txt')
-            nf.save_data_iv(histX=self.iv_his_data[3],
-                            hist_pathX=base_data_hist_logI_path, listX=self.iv_his_data[2],
-                            list_pathX=base_data_edg_logI_path)
+                # 保存单个曲线数据
+                np.savetxt(os.path.join(single_folder, "distance_vs_conductance.txt"),
+                           np.column_stack((self.distance_i, self.conductance_i)), header="Distance\tConductance", fmt="%.6e")
+                np.savetxt(os.path.join(single_folder, "distance_vs_linear_conductance.txt"),
+                           np.column_stack((self.distance_i, self.conductance_new)), header="Distance\tLinear Conductance",
+                           fmt="%.6e")
+                np.savetxt(os.path.join(single_folder, "FN_plot.txt"), np.column_stack((self.distance_new, self.conductance_fn)),
+                           header="1/V\tln(I/V^2)", fmt="%.6e")
 
-            data = np.load(self.file_path)
-            object_data_y = np.array(data['conductance_array'])
-            object_data_x = np.array(data['distance_array'])
+                # 保存均值曲线数据
+                np.savetxt(os.path.join(mean_folder, "distance_vs_mean_conductance.txt"),
+                           np.column_stack((self.distance_i, self.conductance_mean)), header="Distance\tMean Conductance", fmt="%.6e")
+                np.savetxt(os.path.join(mean_folder, "distance_vs_mean_linear_conductance.txt"),
+                           np.column_stack((self.distance_i, self.conductance_mean_new)), header="Distance\tMean Linear Conductance",
+                           fmt="%.6e")
+                np.savetxt(os.path.join(mean_folder, "FN_mean_plot.txt"),
+                           np.column_stack((self.distance_new, self.conductance_fn_mean)), header="1/V\tln(I/V^2) (Mean)",
+                           fmt="%.6e")
+                # 文件路径 保存路径
 
-            # # 保存一下绘制误差棒的数据
-            # save_path_err = os.path.join(folder_path_2, 'err_bar.txt')
-            # # 将数组写入文本文件
-            # np.savetxt(save_path_err, object_data_y, fmt='%d', delimiter='\n')
-
-            # 保存single_trance
-            save_path = os.path.join(folder_path_2, 'single_trance.npz')
-
-            np.savez(save_path, distance_array=object_data_x[self.sorted_indices],
-                     conductance_array=object_data_y[self.sorted_indices],
-                     length_array=data['length_array'], additional_length=len(object_data_x))
+                save_path = os.path.join(folder_path_FN, 'FN_image_path.png')
+                # 打开图像文件
+                image = Image.open(self.FN_image_path)
+                # 保存图像到指定路径
+                image.save(save_path)
 
             self.ui.progressBar_4.setValue(100)
             cacu.signal_window('Every data has saved')
@@ -1765,7 +1928,7 @@ class MainWindow(QMainWindow):
             for i in range(len(ch_score_list)):
                 image = plt.imread(image_list[i])
                 axes[i + 1].imshow(image)
-                axes[i + 1].set_title(f'class num = {ch_score_list[i]}')
+                axes[i + 1].set_title(f'class num = {i+2}')
                 axes[i + 1].axis('off')
             # 调整子图间距
             plt.subplots_adjust(hspace=0.4)
@@ -1964,9 +2127,220 @@ class MainWindow(QMainWindow):
             self.ui.progressBar.setValue(100)
             cacu.signal_window('no data!  please input and calculate it!')
 
+    def Show_N_list(self):
+        plt.close('all')
+        if self.file_path != "":
+            self.showMinimized()
+            self.ui.progressBar_6.setValue(0)
+            self.list_gMean = []
+            self.list_integPSD = []
+            data = np.load(self.file_path)
+            logGArray = data['conductance_array']
+
+            logG_low = self.ui.doubleSpinBox_2.value()
+            logG_high = self.ui.doubleSpinBox_16.value()
+            windowsize = self.ui.spinBox_11.value()
+            frequence = self.ui.spinBox_12.value()
+            N_CacuTime = self.ui.spinBox_13.value()
+
+            CUT_num = N_CacuTime
+            self.list_minN = []
+            list_exponentIdx = []
+            list_minNIdx = []
+            keyPara = {"le_CondHigh": logG_high, "le_CondLow": logG_low, "le_Frequence": frequence,
+                       "le_WindowSize": windowsize}
+
+            for i in range(CUT_num):
+                result = nf.getminN(logGArray, keyPara, CUT_num=CUT_num - 1, CUT_time=i)  # 保存计算结果
+                if result == 0:
+                    self.showNormal()
+                    return 0
+                else:
+                    minN, gMean, integPSD, exponentIdx, minNIdx = result  # 直接使用保存的结果
+                    self.list_minN.append(minN)
+                    self.list_gMean.append(gMean)  # his坐标
+                    self.list_integPSD.append(integPSD)
+                    list_exponentIdx.append(exponentIdx)  # 过程坐标
+                    list_minNIdx.append(minNIdx)
+
+            # Create subplots for ax1 and ax2
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+
+            # Set labels for ax1
+            ax1.set_ylabel("corrcoef")
+            ax1.set_xlabel("n")
+
+            # Plot data on ax1
+            for i in range(CUT_num):
+                ax1.plot(list_exponentIdx[i], list_minNIdx[i])
+
+            # Set labels for ax2
+            ax2.set_xlabel("time")
+            ax2.set_ylabel("N")
+
+            # Plot data on ax2
+            ax2.scatter(list(range(1,CUT_num+1)),self.list_minN)
+            # Save the figure to a file, specify the filename
+            folder_name = "png_images"
+
+
+            self.list_minN_png_path = os.path.join(folder_name, 'list_minN.png')
+            plt.savefig(self.list_minN_png_path)
+            # Display the plots
+
+            self.initUI(self.ui.label_57, self.list_minN_png_path)
+            self.ui.progressBar_6.setValue(100)
+            cacu.signal_window('ok!')
+            self.showNormal()
+        else:
+            self.ui.progressBar_6.setValue(100)
+            cacu.signal_window('no data!  please input it!')
+
+    def Show_psd_list(self):
+        plt.close('all')
+        if self.list_gMean is not None:
+            self.showMinimized()
+            self.ui.progressBar_6.setValue(0)
+
+            N_CacuTime = self.ui.spinBox_13.value()
+
+            # 需要传参
+            # range_y = (self.ui.doubleSpinBox_18.value(), self.ui.doubleSpinBox_19.value())
+            # range_x = (self.ui.doubleSpinBox_15.value(), self.ui.doubleSpinBox_17.value())
+
+            fig, ax = plt.subplots(1, N_CacuTime, figsize=(4 * N_CacuTime, 3.5))
+            # 调整子图间距
+            plt.subplots_adjust(hspace=0.4)
+            # 调整布局
+            plt.tight_layout()
+            # If N_CacuTime is 1, convert ax to a list for consistent indexing
+            if N_CacuTime == 1:
+                ax = [ax]
+
+            # Iterate over each axis and plot
+            for i in range(N_CacuTime):
+                # Plot gMean vs integPSD
+                ax[i].plot(self.list_gMean[i], self.list_integPSD[i])
+
+                # Plot 2D histogram
+                h = ax[i].hist2d(np.log(self.list_gMean[i]),
+                                 np.log(self.list_integPSD[i] / self.list_gMean[i] ** self.list_minN[i]),
+                                 bins=(self.ui.spinBox_15.value(), self.ui.spinBox_16.value()),
+                                 # range=[range_x, range_y],  # Specify appropriate range_x and range_y
+                                 cmap=self.ui.color_style_2d.currentText())
+
+                # Add a colorbar to the plot
+                fig.colorbar(h[3], ax=ax[i])
+                # Set x-axis label
+                ax[i].set_xlabel("log(gMean)")
+                # Set plot title
+                ax[i].set_title("n=" + str(self.list_minN[i]))
+                # Set y-axis label
+                ax[i].set_ylabel("log(integPSD / gMean^minN)")
+
+            # Save the figure to a file, specify the filename
+            folder_name = "png_images"
+            self.integPSD_png_path = os.path.join(folder_name, 'integPSD.png')
+            plt.savefig(self.integPSD_png_path)
+            # Display the plots
+
+            self.initUI(self.ui.label_57, self.integPSD_png_path)
+            self.ui.progressBar_6.setValue(100)
+            cacu.signal_window('ok!')
+            self.showNormal()
+        else:
+            self.ui.progressBar_6.setValue(100)
+            cacu.signal_window('no data!  please input it!')
+
+    def pre_single_cut(self):
+        plt.close('all')
+        if self.file_path != "":
+
+            self.ui.progressBar_6.setValue(0)
+            i = self.ui.spinBox_14.value() - 1
+            data = np.load(self.file_path)
+            logGArray = data['conductance_array']
+            DisArrays = data['distance_array']
+
+            logGLow = self.ui.doubleSpinBox_2.value()
+            logGHigh = self.ui.doubleSpinBox_16.value()
+            windowsize = self.ui.spinBox_11.value()
+
+            logGArraySelect2 = np.where((logGArray >= logGLow) & (logGArray <= logGHigh), logGArray,  0)
+            DisArraySelect2 = np.where((logGArray >= logGLow) & (logGArray <= logGHigh), DisArrays, -np.inf)
+
+            if np.count_nonzero(logGArraySelect2[i]) > windowsize:
+                GArray_0 = logGArraySelect2[i][logGArraySelect2[i] != 0][:windowsize]
+                DArray_0 = DisArraySelect2[i][logGArraySelect2[i] != 0][:windowsize]
+            else:
+                GArray_0 = logGArraySelect2[i][logGArraySelect2[i] != 0]
+                DArray_0 = DisArraySelect2[i][logGArraySelect2[i] != 0]
+
+            plt.plot(DArray_0, GArray_0)
+            plt.xlabel("DArray")
+            plt.ylabel("GArray")
+
+            folder_name = "png_images"
+            self.single_cut_png_path = os.path.join(folder_name, 'single_cut.png')
+            plt.savefig(self.single_cut_png_path)
+            # Display the plots
+            self.initUI(self.ui.label_57, self.single_cut_png_path)
+            self.ui.progressBar_6.setValue(100)
+            cacu.signal_window('ok!')
+
+        else:
+            self.ui.progressBar_6.setValue(100)
+            cacu.signal_window('no data!  please input it!')
+
+    def psd_save(self):
+        plt.close('all')
+        if self.file_path != "":
+            self.ui.progressBar.setValue(0)
+            file_path = self.file_path
+            folder_path = os.path.dirname(file_path)  # 提取single trance所在路径
+
+            psd_minN_folder = os.path.join(folder_path, 'psd_minN')
+            os.makedirs(psd_minN_folder, exist_ok=True)
+            if self.list_minN:
+                save_path = os.path.join(psd_minN_folder, 'psd_minN.png')
+                save_path = os.path.normpath(save_path)
+                # 打开图像文件
+                image = Image.open(self.list_minN_png_path)
+                # 保存图像到指定路径
+                image.save(save_path)
+
+                # 定义保存路径
+                save_path_Line_path = os.path.join(psd_minN_folder, 'psd_minN.txt')
+
+                # 打开文件并写入 list_minN
+                with open(save_path_Line_path, 'w') as f:
+                    for item in self.list_minN:
+                        f.write(f"{item}\n")  # 每个元素写入一行
+
+            if self.integPSD_png_path:
+                save_path = os.path.join(psd_minN_folder, 'integPSD.png')
+                save_path = os.path.normpath(save_path)
+                # 打开图像文件
+                image = Image.open(self.integPSD_png_path)
+                # 保存图像到指定路径
+                image.save(save_path)
+            if self.single_cut_png_path:
+                save_path = os.path.join(psd_minN_folder, 'single_cut.png')
+                save_path = os.path.normpath(save_path)
+                # 打开图像文件
+                image = Image.open(self.single_cut_png_path)
+                # 保存图像到指定路径
+                image.save(save_path)
+            cacu.signal_window('ok!')
+
+        else:
+            self.ui.progressBar.setValue(100)
+            cacu.signal_window('no data!  please input and calculate it!')
+
 
 if __name__ == '__main__':
     freeze_support()  # 在 Windows 上支持多进程打包
+
     app = QApplication()
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("icon.ico")
     # 创建主窗口并显示

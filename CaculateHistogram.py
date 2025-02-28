@@ -90,7 +90,7 @@ def plt_2dIV_1div(object_data_x, object_data_y, name=None, bin_1dhis=200, bin_2d
     # 计算筛选后的hist
     hist, extent, his2d_edg_list = plt_2dIV(selected_data_x, selected_data_y, bin_1dhis=bin_1dhis,bin_2dhis=bin_2dhis,
                                             threshold=threshold, range_y=range_y)
-    print(range_x)
+
     # 计算拟合曲线
     if gauss_fit:
         # 计算高斯Mean
@@ -309,6 +309,9 @@ def cacu_chfig(labels, n_clusters, conductance_normalized):
     folder_name = "png_images"
     path = os.path.join(folder_name, f'CH_scan{n_clusters}.png')
     plt.savefig(path)
+
+    eps_path = os.path.join(folder_name, f'ch{n_clusters}.eps')
+    plt.savefig(eps_path, format='eps')  # 保存为 EPS 文件
     return path
 
 
@@ -461,6 +464,8 @@ def draw_merge_figure(datas, distance, conductance, length, n_clusters=4, bins_1
     merged_image_path = os.path.join(folder_name, 'merged_image.png')
     plt.savefig(merged_image_path, dpi=80)
 
+
+
     his_data = [con_his_list_class, len_his_list_class, edges_2dhis_class, hist_class]
     return his_data, plot_paths, merged_image_path
 
@@ -532,12 +537,23 @@ def draw_figure(distance, conductance, length, bins_1Dcon=1000,
     folder_name = "png_images"
     if label:
         path = os.path.join(folder_name, f'{label}.png')
-        print(path)
+
     else:
         path = os.path.join(folder_name, 'temp_figure.png')
     plt.savefig(path)
 
-    his_data = [con_his_list, len_his_list, edges_2dhis, hist]
+    # image_path2 = os.path.join(folder_name, f'{label}.eps')
+    # plt.savefig(image_path2, format='eps', dpi=80)
+    # 分别提取 x 和 y 边界
+    x_edges, y_edges = edges_2dhis
+
+    # 使用网格生成二维坐标
+    x_grid, y_grid = np.meshgrid(x_edges, y_edges)
+
+    # 将网格转换为二维坐标点列表
+    coordinates = np.column_stack((x_grid.ravel(), y_grid.ravel()))
+
+    his_data = [con_his_list, len_his_list, coordinates, hist]
     return his_data
 
 
@@ -748,6 +764,10 @@ def single_trance(distance, conductance, length, i, dis_low_cut_input, dis_high_
     image_path = os.path.join(folder_name, 'single_figure.png')
     plt.savefig(image_path)
 
+
+    image_path2 = os.path.join(folder_name, 'SINGLEZ.eps')
+    plt.savefig(image_path2, format='eps', dpi=400)
+
     single_trance_data = [distance_array, conductance_array]
     data_save = [hist1d, hist, edges_2d, single_trance_data]
     return image_path, data_save
@@ -779,30 +799,25 @@ def single_trance_iv(biasVData, currentData, i=0, bins=50):
     return image_path
 
 
-def save_data(data, path):
+def save_data(data, paths):
+    def save_single_data(data, path, formatter, delimiter='\t', end='\n'):
+        """通用数据保存函数"""
+        with open(path, 'w') as file:
+            for item in data:
+                formatted_line = delimiter.join(formatter(element) for element in item)
+                file.write(formatted_line + end)
+
+    # 数据保存逻辑
     data_0, data_1, data_2, data_3 = data
-    save_path_con, save_path_len, save_path_2d_edges, save_path_2d_hist = path
-    with open(save_path_con, 'w') as file:
-        for item in data_0:
-            formatted_item0 = '%.2f' % item[0]  # 将 item[0] 保留两位小数
-            line = f'{formatted_item0:<10}\t{item[1]:<10}\n'
-            file.write(line)
-    with open(save_path_len, 'w') as file:
-        for item in data_1:
-            formatted_item0 = '%.2f' % item[0]  # 将 item[0] 保留两位小数
-            line = f'{formatted_item0:<10}\t{item[1]:<10}\n'
-            file.write(line)
-    with open(save_path_2d_edges, 'w') as file:
-        for item in data_2:
-            formatted_values = ['%.2f' % val for val in item]  # 将元素保留两位小数
-            line = '\t'.join(formatted_values)  # 使用制表符分隔格式化后的元素
-            file.write(line + '\n')  # 写入每个子列表，并添加换行符
-            file.write('\n\n')  # 添加两个换行符
-    with open(save_path_2d_hist, 'w') as file:
-        for row in data_3:
-            formatted_row = [f'{int(element):<6}' for element in row]  # 使用格式化字符串对齐每个元素的整数部分
-            line = ' '.join(formatted_row) + '\n'
-            file.write(line)
+    save_path_con, save_path_len, save_path_2d_edges, save_path_2d_hist = paths
+
+    # 保存数据 0 和 1，保留两位小数
+    save_single_data(data_0, save_path_con, lambda x: f'{x:.2f}')
+    save_single_data(data_1, save_path_len, lambda x: f'{x:.2f}')
+    save_single_data(data_2, save_path_2d_edges, lambda x: f'{x:.2f}')
+
+    # 保存数据 3，格式化为整齐的整数行
+    save_single_data(data_3, save_path_2d_hist, lambda x: f'{int(x):<6}', delimiter=' ', end='\n')
 
 
 def signal_window(text):

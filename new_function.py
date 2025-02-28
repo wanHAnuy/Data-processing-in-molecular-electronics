@@ -5,6 +5,8 @@ import CaculateHistogram as cacu
 from scipy.interpolate import interp1d
 from CaculateHistogram import single_1d_his, calculate_his, chose_cluster
 from PIL import Image
+import matplotlib.mlab as mlab
+from scipy.fftpack import fft
 
 
 def devide_cluster(conductance, object_data=None, n_clusters=4, clusters_way=0):
@@ -116,13 +118,13 @@ def draw_divide(conductance, distance, length, bins_1Dcon=400, low_cut_1Dcon=-6,
     image_path = os.path.join(folder_name, 'draw_divide.png')
     plt.savefig(image_path, dpi=200)
 
-    # 保存方差曲线为 EPS 文件
-    axes[0].set_visible(True)  # 仅显示方差曲线子图
-    axes[0].set_frame_on(True)  # 显示框架
-    parent_folder = os.path.dirname(file_path2)
-    eps_path = os.path.join(parent_folder, 'Time Histogram.eps')
-    plt.savefig(eps_path, format='eps')  # 保存为 EPS 文件
-    plt.close()
+    # # 保存方差曲线为 EPS 文件
+    # axes[0].set_visible(True)  # 仅显示方差曲线子图
+    # axes[0].set_frame_on(True)  # 显示框架
+    # parent_folder = os.path.dirname(file_path2)
+    # eps_path = os.path.join(parent_folder, 'Time Histogram.eps')
+    # plt.savefig(eps_path, format='eps')  # 保存为 EPS 文件
+    # plt.close()
 
     hist_2d_data = [np.array(hist_2d), row_variances]
     return data, image_path, hist_2d_data
@@ -174,15 +176,6 @@ def peak_draw_divide(conductance, distance, bins_1Dlen=50, his_1d_dis_0=0, his_1
     folder_name = "png_images"
     image_path = os.path.join(folder_name, 'draw_divide_peak.png')
     plt.savefig(image_path, dpi=200)
-    plt.close()
-
-    # 保存单独的 axes[0] 子图为 EPS 文件
-    axes[0].set_visible(True)  # 仅显示第一个子图
-    axes[0].set_frame_on(True)  # 显示框架
-    axes[0].set_position([0.1, 0.1, 0.8, 0.8])  # 调整子图位置
-    parent_folder = os.path.dirname(file_path2)
-    eps_path = os.path.join(parent_folder, 'axes_0.eps')
-    plt.savefig(eps_path, format='eps')  # 保存为 EPS 文件
     plt.close()
 
     return image_path, hist_2d_data
@@ -403,6 +396,106 @@ def make_forder():  # 定义要创建的文件夹名称
     # 创建文件夹（如果不存在）
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
+
+
+def getMinNInterval(gMean, integPSD):
+    """
+
+    :param gMean:
+    :param integPSD:
+    :return:
+    """
+    if gMean.shape[0] == 0:
+        cacu.signal_window('window size is too big!!!please change it!!!')
+        return 0
+    exponentIdx = np.arange(0.5, 2.5, 0.005)
+    minNIdx = [getMinHelper(gMean, integPSD, k) for k in exponentIdx]
+    # print(minNIdx)
+
+    # plt.plot(exponentIdx, [i[0] for i in minNIdx])
+    # plt.xlabel("n")
+    # plt.ylabel("corrcoef")
+    return sorted(minNIdx)[0][1], exponentIdx, [i[0] for i in minNIdx]
+
+
+def getMinHelper(gMean, integPSD, exponent):
+    try:
+        gMeanPower = np.power(gMean, exponent)
+        scaledPSD = integPSD / gMeanPower
+        coef = np.corrcoef(scaledPSD, gMean)[0, 1]
+    except Exception as e:
+        errMsg = f"minNIdx计算异常：{e}"
+        # cls.logger.error(errMsg)
+        return np.inf, exponent
+    else:
+        return np.abs(coef), exponent
+
+
+def getIntegPSD(GArray, freqLow, freqHigh, keyPara, mode="mlab", CUT_num=0, CUT_time=0):
+    """
+    使用mlab.psd()或幅度谱平方求psd；并返回电导均值
+    :param keyPara: 界面配置参数
+    :param condData: 对数电导单条曲线
+    :param mode:计算模式
+    :return: psd的积分, 平均电导
+    """
+    windowSize = int(keyPara["le_WindowSize"])
+
+    a = windowSize // (CUT_num + 1)
+
+    if np.count_nonzero(GArray) < windowSize:
+        return 0.0, 0.0
+    else:
+        try:
+            GArray_0 = GArray[GArray != 0][:windowSize]
+            GArray = GArray_0[CUT_time * a: CUT_time * a + a]
+            gMean = np.mean(GArray)
+            N = len(GArray)
+            sampFreq = keyPara["le_Frequence"]
+            if mode == "mlab":
+                psd, freqs = mlab.psd(GArray, NFFT=N, sides='onesided',
+                                      Fs=sampFreq, window=mlab.window_hanning,
+                                      pad_to=N, scale_by_freq=False)
+                psd *= 2  # 与手算的相差系数2
+            else:
+                fftRes = fft(GArray)
+                fftResAbs = np.abs(fftRes)
+                resNorm = fftResAbs / (N / 2)
+                resNorm[0] /= 2
+
+                freqs = np.linspace(0, sampFreq // 2, N // 2)
+                oneSideFFT = resNorm[:N // 2]
+                psd = oneSideFFT ** 2
+
+            integRangeIdx = np.where((freqs >= freqLow) & (freqs <= freqHigh))[0]
+            # integPSD = integrate.trapz(psd[integRangeIdx], freqs[integRangeIdx])
+            integPSD = np.trapz(psd[integRangeIdx], freqs[integRangeIdx])
+        except Exception as e:
+
+            return 0.0, 0.0
+        else:
+            return integPSD, gMean
+
+
+def getminN(logGArray, keyPara, CUT_num=0, CUT_time=0):
+    logGHigh, logGLow = keyPara["le_CondHigh"], keyPara["le_CondLow"]
+    logGArraySelect = np.where((logGArray >= logGLow) & (logGArray <= logGHigh), logGArray, -np.inf)   # 为什么是 -np.inf？？？？？
+
+    gArraySelect = np.power(10.0, logGArraySelect)  # 将对数尺度的导电率数据转换为线性尺度。
+
+    # 计算psd  GArray,gMean, freqLow, freqHigh, keyPara, mode="mlab"
+    resultTemp = np.apply_along_axis(getIntegPSD, 1, gArraySelect, 100, 1000, keyPara, CUT_num=CUT_num,
+                                     CUT_time=CUT_time)
+    integPSD, gMean = resultTemp[:, 0], resultTemp[:, 1]
+    finalIdx = np.where(integPSD != 0.0)
+
+    gMean = gMean[finalIdx]
+    integPSD = integPSD[finalIdx]
+    if getMinNInterval(gMean, integPSD)!=0:
+        minN, exponentIdx, minNIdx = getMinNInterval(gMean, integPSD)
+
+        return minN, gMean, integPSD, exponentIdx, minNIdx  # N值计算/直方图绘图元素/过程图绘图
+    else: return 0
 
 # def Denoising(tran_X, data, predict_val=0.5):
 #     # 加载模型

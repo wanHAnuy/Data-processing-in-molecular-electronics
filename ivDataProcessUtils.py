@@ -94,6 +94,11 @@ def cacu_3fig(V_data, logI_data, logG, I_data, butter_parameter=1, sample_point=
     image_path0 = os.path.join(folder_name, f'IVfig{label}.png')
 
     plt.savefig(image_path0, dpi=100)
+
+    # image_path2 = os.path.join(folder_name, f'IVfig{label}.eps')
+    # plt.savefig(image_path2, format='eps', dpi=100)
+
+
     # 2. 图像数据
     his_data = (hist_logI, hist_logDI, hist_logG, hist_I, edg_logI, edg_logDI, edg_logG, edg_I)
     # 3.处理后数据
