@@ -15,7 +15,7 @@ setup(
     name="Data processing App",
     version="1.8.1",
     description=" Single-molecule research only.",
-    author="Wang Haoyu",
+    author="Wang Haoyu Nankai University",
     options={'build_exe': {'include_files': files}},
     executables=[target]
 
