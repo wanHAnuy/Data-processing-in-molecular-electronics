@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# @Time   : 2023/12/12 22:21
+# @Time   : 2025/3/27 23:21
 # @Author : Gang/wang
 # @File   : ivDataProcessUtils.py
 import copy
@@ -98,7 +98,6 @@ def cacu_3fig(V_data, logI_data, logG, I_data, butter_parameter=1, sample_point=
     # image_path2 = os.path.join(folder_name, f'IVfig{label}.eps')
     # plt.savefig(image_path2, format='eps', dpi=100)
 
-
     # 2. 图像数据
     his_data = (hist_logI, hist_logDI, hist_logG, hist_I, edg_logI, edg_logDI, edg_logG, edg_I)
     # 3.处理后数据
@@ -124,11 +123,223 @@ class IVDataProcessUtils:
         return [biasVolt, current, cond]
 
     @classmethod
-    # def hysteresis(cls, filePath, keyPara):
-    def hysteresis(cls, filePath, bias_base=0.1, peakStart=-2.5, peakEnd=-5.5):
+    # def hysteresis(cls, filePath, bias_base=0.1, peakStart=-2.5, peakEnd=-5.5):
+    #     # 1. 数据加载
+    #     biasVolt, current, cond = cls.loadTMDSFile(filePath)
+    #     if biasVolt is None or current is None or cond is None:
+    #         return None, None, None
+    #
+    #     # 2. 提取电压阶跃的起始和结束索引
+    #     diffBiasV = np.concatenate((np.diff(biasVolt), np.array([10.0])))
+    #     # 找到从bias_base开始的上升阶跃（0.1 -> 0.2）
+    #     start_candi = (np.where(
+    #         np.isclose(biasVolt, bias_base, atol=1e-4) &
+    #         np.isclose(diffBiasV, bias_base, atol=1e-4))[0] + 1)
+    #     # 找到从bias_base*2下降的阶跃（0.2 -> 0.1）
+    #     end_candi = np.where(
+    #         np.isclose(biasVolt, bias_base * 2, atol=1e-4) &
+    #         np.isclose(diffBiasV, -bias_base, atol=1e-4))[0]
+    #
+    #     startIdx, endIdx = [], []
+    #     for s in start_candi:
+    #         # 找到比s更大的第一个结束点
+    #         ends = end_candi[end_candi > s]
+    #         if len(ends) > 0:
+    #             startIdx.append(s)
+    #             endIdx.append(ends[0])
+    #     startIdx = np.array(startIdx)
+    #     endIdx = np.array(endIdx)
+    #
+    #     # 保证endIdx加上额外偏移后不超出范围
+    #     endIdx += 200
+    #     valid = endIdx < biasVolt.shape[0]
+    #     startIdx = startIdx[valid]
+    #     endIdx = endIdx[valid]
+    #
+    #     # 根据电压是否回到bias_base进行二次筛选
+    #     if len(endIdx) > 0:
+    #         biasVoltEnd = biasVolt[endIdx]
+    #         temp = np.where(np.isclose(biasVoltEnd, bias_base, atol=1e-4))[0]
+    #         startIdx = startIdx[temp]
+    #         endIdx = endIdx[temp]
+    #
+    #     # 如果没有符合条件的区间则返回空
+    #     if len(startIdx) == 0:
+    #         return None, None, None
+    #
+    #     # 3. 分割各段轨迹
+    #     biasVTrace, currentTrace, condTrace = [], [], []
+    #     for s, e in zip(startIdx, endIdx):
+    #         biasVTrace.append(biasVolt[s:e])
+    #         currentTrace.append(current[s:e])
+    #         condTrace.append(cond[s:e])
+    #     biasVTrace = np.array(biasVTrace, dtype=object)
+    #     currentTrace = np.array(currentTrace, dtype=object)
+    #     condTrace = np.array(condTrace, dtype=object)
+    #
+    #     # 如果没有有效轨迹直接返回
+    #     if biasVTrace.shape[0] == 0:
+    #         return None, None, None
+    #
+    #     # 4. 根据轨迹内部的零点、峰值确定真正的扫描区域
+    #     cutStart = np.ones(biasVTrace.shape[0], dtype=int)
+    #     cutEnd = np.ones(biasVTrace.shape[0], dtype=int)
+    #     for i in range(biasVTrace.shape[0]):
+    #         trace = biasVTrace[i]
+    #         zero_idx = np.where(np.isclose(trace, 0, atol=1e-4))[0]
+    #         if zero_idx.size < 2:
+    #             continue
+    #         # 找到正式扫描起点：连续0结束的位置
+    #         for j in range(len(zero_idx) - 1):
+    #             if (zero_idx[j + 1] - zero_idx[j] > 1) and (trace[zero_idx[j] + 1] != 0):
+    #                 cutStart[i] = zero_idx[j]
+    #                 break
+    #         # 如果cutStart未更新，则跳过
+    #         if cutStart[i] == 1:
+    #             continue
+    #
+    #         # 反向寻找终点
+    #         zero_end = 1
+    #         for j in range(len(zero_idx) - 1, 0, -1):
+    #             if zero_idx[j] - zero_idx[j - 1] > 1:
+    #                 zero_end = zero_idx[j]
+    #                 break
+    #         if zero_end == 1:
+    #             continue
+    #
+    #         # 根据轨迹峰值进行进一步调整
+    #         peak_index = np.where((trace == trace.min()) | (trace == trace.max()))[0]
+    #         if peak_index.size == 0:
+    #             continue
+    #         first_peak = peak_index[0]
+    #         # 针对正向情况：电压先正后负，终点应为从负变正的索引
+    #         if trace[first_peak] > 0 and trace[zero_end - 1] > 0:
+    #             for j in range(zero_end - 1, 0, -1):
+    #                 if trace[j] <= 0 and trace[j + 1] > 0:
+    #                     zero_end = j
+    #                     break
+    #         # 针对负向情况：电压先负后正
+    #         elif trace[first_peak] < 0 and trace[zero_end - 1] < 0:
+    #             for j in range(zero_end - 1, 0, -1):
+    #                 if trace[j] >= 0 and trace[j + 1] < 0:
+    #                     zero_end = j
+    #                     break
+    #         cutEnd[i] = zero_end
+    #
+    #     # 删除那些起点或终点未更新的轨迹
+    #     valid_trace = (cutStart != 1) & (cutEnd != 1)
+    #     biasVTrace = biasVTrace[valid_trace]
+    #     currentTrace = currentTrace[valid_trace]
+    #     condTrace = condTrace[valid_trace]
+    #     cutStart = cutStart[valid_trace]
+    #     cutEnd = cutEnd[valid_trace]
+    #
+    #     if biasVTrace.shape[0] == 0:
+    #         return None, None, None
+    #
+    #     # 5. 利用统一长度和差分计算检测点
+    #     max_len = np.max([len(x) for x in biasVTrace])
+    #     biasVTrace_same_len = [np.pad(trace, (0, max_len - len(trace)), mode='edge') for trace in biasVTrace]
+    #     biasVTrace_same_len = np.array(biasVTrace_same_len)
+    #     diffBiasTrace = np.concatenate(
+    #         (np.diff(biasVTrace_same_len), np.full((biasVTrace_same_len.shape[0], 1), 10.0)),
+    #         axis=1)
+    #
+    #     frontCheckBIdx = np.isclose(biasVTrace_same_len, bias_base * 2, atol=1e-3) & \
+    #                      np.isclose(diffBiasTrace, -bias_base * 2, atol=1e-3)
+    #     backCheckFIdx = np.isclose(biasVTrace_same_len, 0, atol=1e-3) & \
+    #                     np.isclose(diffBiasTrace, bias_base * 2, atol=1e-3)
+    #     backCheckBIdx = np.isclose(biasVTrace_same_len, bias_base * 2, atol=1e-3) & \
+    #                     np.isclose(diffBiasTrace, -bias_base, atol=1e-3)
+    #
+    #     # 筛选条件：只保留同时满足三个检测点的轨迹
+    #     valid_idx = np.apply_along_axis(np.any, 1, frontCheckBIdx) & \
+    #                 np.apply_along_axis(np.any, 1, backCheckFIdx) & \
+    #                 np.apply_along_axis(np.any, 1, backCheckBIdx)
+    #
+    #     biasVTrace = biasVTrace[valid_idx]
+    #     currentTrace = currentTrace[valid_idx]
+    #     condTrace = condTrace[valid_idx]
+    #     cutStart = cutStart[valid_idx]
+    #     cutEnd = cutEnd[valid_idx]
+    #     frontCheckBIdx = frontCheckBIdx[valid_idx]
+    #     backCheckFIdx = backCheckFIdx[valid_idx]
+    #     backCheckBIdx = backCheckBIdx[valid_idx]
+    #
+    #     if biasVTrace.shape[0] == 0:
+    #         return None, None, None
+    #
+    #     # 6. 从检测点数组中提取第一个True索引
+    #     frontCheckB = np.array([np.where(temp)[0][0] for temp in frontCheckBIdx])
+    #     backCheckF = np.array([np.where(temp)[0][0] for temp in backCheckFIdx])
+    #     backCheckB = np.array([np.where(temp)[0][0] for temp in backCheckBIdx])
+    #
+    #     # 计算电导的均值时避免索引越界：动态选择偏移量（取20%区间长度或固定100，取较小值）
+    #     condCheckF = []
+    #     condCheckB = []
+    #     for i in range(biasVTrace.shape[0]):
+    #         seg_len = len(condTrace[i])
+    #         offset = min(100, seg_len // 5)
+    #         # 若frontCheckB[i] - offset 小于offset，则从offset开始
+    #         start_range = offset if frontCheckB[i] - offset < offset else frontCheckB[i] - offset
+    #         # 若backCheckB[i] - offset 小于 backCheckF[i] + offset，则取 backCheckB[i]
+    #         end_range = backCheckB[i] - offset if backCheckB[i] - offset > backCheckF[i] + offset else backCheckB[i]
+    #         condCheckF.append(np.mean(condTrace[i][offset:start_range]))
+    #         condCheckB.append(np.mean(condTrace[i][backCheckF[i] + offset:end_range]))
+    #     condCheckF = np.array(condCheckF)
+    #     condCheckB = np.array(condCheckB)
+    #
+    #     # 7. 根据扫描区间限制筛选数据，删除超出scanRange的轨迹
+    #     scanRange = 3000
+    #     valid_scan = np.array([np.all(biasVData <= scanRange) for biasVData in
+    #                            [trace[cutS:cutE + 1] for trace, cutS, cutE in zip(biasVTrace, cutStart, cutEnd)]])
+    #
+    #     # 提取最终的轨迹数据
+    #     biasVData = np.empty(biasVTrace.shape[0], dtype=object)
+    #     currentData = np.empty(biasVTrace.shape[0], dtype=object)
+    #     condData = np.empty(biasVTrace.shape[0], dtype=object)
+    #     for i in range(biasVTrace.shape[0]):
+    #         biasVData[i] = biasVTrace[i][cutStart[i]:cutEnd[i] + 1]
+    #         currentData[i] = currentTrace[i][cutStart[i]:cutEnd[i] + 1]
+    #         condData[i] = condTrace[i][cutStart[i]:cutEnd[i] + 1]
+    #
+    #     biasVData = biasVData[valid_scan]
+    #     currentData = currentData[valid_scan]
+    #     condData = condData[valid_scan]
+    #     condCheckB = condCheckB[valid_scan]
+    #     condCheckF = condCheckF[valid_scan]
+    #
+    #     meanCond = (condCheckB + condCheckF) / 2
+    #     if biasVData.shape[0] == 0:
+    #         return None, None, None
+    #
+    #     # 8. 对电流数据转换：保存原始数据备份，同时转换为对数尺度（单位转换：mA->nA）
+    #     import copy
+    #     currentData_so = copy.deepcopy(currentData)
+    #     for i in range(currentData.shape[0]):
+    #         # 为避免 log10(0) 问题，clip到一个极小正值
+    #         abs_current = np.clip(np.abs(currentData[i]), 1e-12, None)
+    #         currentData[i] = np.log10(abs_current) + 6  # mA放大e6转换为nA
+    #         currentData[i] = np.where(np.isneginf(currentData[i]), -3, currentData[i])
+    #
+    #     # 9. 根据condCheck的范围筛选数据
+    #     valid_final = (condCheckB >= peakEnd) & (condCheckB <= peakStart) & \
+    #                   (condCheckF >= peakEnd) & (condCheckF <= peakStart)
+    #
+    #     currentData = currentData[valid_final]
+    #     condData = condData[valid_final]
+    #     biasVData = biasVData[valid_final]
+    #     currentData_so = currentData_so[valid_final]
+    #
+    #     if biasVData.shape[0] == 0:
+    #         return None, None, None
+    #     else:
+    #         return currentData, condData, biasVData, currentData_so, meanCond
 
+    def hysteresis(cls, filePath, bias_base=0.1, peakStart=-2.5, peakEnd=-5.5):
+        """返回偏压，电导，电流三个二维数组，每一条占用一行
+        """
         biasVolt, current, cond = cls.loadTMDSFile(filePath)
-        # bias_base = keyPara['le_Bias']
         biasVTrace, currentTrace, condTrace = [], [], []
         diffBiasV = np.concatenate((np.diff(biasVolt), np.array([10.0])))
         # 偏压从0.1到0.2阶跃中0.2v处的索引
@@ -149,22 +360,10 @@ class IVDataProcessUtils:
         startIdx = np.array(startIdx)
         endIdx = np.array(endIdx)
 
-        # 确保扫描区间没有超过总长度，同时保证结束点的电压是0.1
-        # strat是第一个为0.2的index  end是最后一个为0.2的点！！
-        endIdx = endIdx + 200
-        trueIdx = endIdx < biasVolt.shape[0]
-        endIdx = endIdx[trueIdx]  # 这里直接使用了布尔索引！！
-        if trueIdx.shape[0] != 0:
-            startIdx = startIdx[trueIdx]
-            biasVoltEnd = biasVolt[endIdx]
-            tempIdx = np.where(np.isclose(biasVoltEnd, bias_base, 0.0001))[0]
-            endIdx = endIdx[tempIdx]
-            startIdx = startIdx[tempIdx]
-
         # 得到扫面区间，接下来就是把中间的切开！！
         for i in range(startIdx.shape[0]):
-            biasVTrace.append(biasVolt[startIdx[i]:endIdx[i]])
-            currentTrace.append(current[startIdx[i]:endIdx[i]])
+            biasVTrace.append(biasVolt[startIdx[i]:endIdx[i] + 1])
+            currentTrace.append(current[startIdx[i]:endIdx[i] + 1])
             condTrace.append(cond[startIdx[i]:endIdx[i]])
         biasVTrace = np.array(biasVTrace, dtype='object')
         currentTrace = np.array(currentTrace, dtype='object')
@@ -173,108 +372,70 @@ class IVDataProcessUtils:
         if biasVTrace.shape[0] == 0:
             return None, None, None
 
+        condPeakStart = peakStart
+        condPeakEnd = peakEnd
         # 寻找电压是0v的起始和终点
         cutStart, cutEnd = np.ones(biasVTrace.shape[0], dtype=int), np.ones(biasVTrace.shape[0], dtype=int)
         for i in range(biasVTrace.shape[0]):
-            zero_idx = np.where(np.isclose(biasVTrace[i], 0, 0.0001))[0]
-            # TODO 起点处可以也有波动，起点可以按照开始阶段的最后一个0来算，但终点需要根据最后一个peak来计算，从peak开始遍历找到第一个变号的地方
+            trace = biasVTrace[i]
+            zero_idx = np.where(np.isclose(trace, 0, 0.0001))[0]
+
+            # 条件1 至少3个零点
+            # if (len(zero_idx) < 3):
+            #     continue
+
+            # 条件2 必须有从2*bias_base-> 0 和 从 0 -> 2*bias_base的跳跃
+            if abs(trace[zero_idx[0] - 1] - 2 * bias_base) > 0.0001 and abs(
+                    trace[zero_idx[-1] + 1] - 2 * bias_base) > 0.0001:
+                continue
+
+            # 条件3 偏压在2*bias_base时的平均电导必须在范围内
+            cond_start = condTrace[i][:zero_idx[0] - 1]
+            cond_end = condTrace[i][zero_idx[-1] + 1:]
+            cond_start_mean = cond_start[np.isfinite(cond_start)].mean()
+            cond_end_mean = cond_end[np.isfinite(cond_end)].mean()
+            if cond_start_mean < condPeakEnd or cond_start_mean > condPeakStart or cond_end_mean < condPeakEnd or cond_end_mean > condPeakStart:
+                continue
+
             for j in range(zero_idx.shape[0] - 1):  # 找到正式扫描的起点
-                if (zero_idx[j + 1] - zero_idx[j] > 1) and (biasVTrace[i][zero_idx[j] + 1] != 0):
+                if (zero_idx[j + 1] - zero_idx[j] > 1) and (trace[zero_idx[j] + 1] != 0):
                     cutStart[i] = zero_idx[j]
                     break
             if cutStart[i] == 1:
                 continue
             # 寻找可能的终点
-            zero_end = 1
+            temp_end = 1
             for j in range(zero_idx.shape[0] - 1, 0, -1):
                 if zero_idx[j] - zero_idx[j - 1] > 1:
-                    zero_end = zero_idx[j]
+                    temp_end = zero_idx[j]
                     break
-            if zero_end == 1:
+            if temp_end == 1:
                 continue
-            trace = biasVTrace[i]
+            # 此时cut_start[i] 和 temp_end 必然不是1
             peak_index = np.where((trace == trace.min()) | (trace == trace.max()))[0]
             first_peak = peak_index[0]
-            if biasVTrace[i][first_peak] > 0 and biasVTrace[i][zero_end - 1] > 0:  # 从0到1，结尾必须从-1到0
-                for j in range(zero_end - 1, 0, -1):
-                    if biasVTrace[i][j] <= 0 and biasVTrace[i][j + 1] > 0:
-                        zero_end = j
+            if trace[first_peak] > 0 and trace[temp_end - 1] > 0:  # 从0到1，结尾必须从-1到0
+                for j in range(temp_end - 1, 0, -1):
+                    if trace[j] <= 0 and trace[j + 1] > 0:
+                        temp_end = j
                         break
-            elif biasVTrace[i][first_peak] < 0 and biasVTrace[i][zero_end - 1] < 0:  # 从0到-1，结尾必须从1到0
-                for j in range(zero_end - 1, 0, -1):
-                    if biasVTrace[i][j] >= 0 and biasVTrace[i][j + 1] < 0:
-                        zero_end = j
+            elif trace[first_peak] < 0 and trace[temp_end - 1] < 0:  # 从0到-1，结尾必须从1到0
+                for j in range(temp_end - 1, 0, -1):
+                    if trace[j] >= 0 and trace[i][j + 1] < 0:
+                        temp_end = j
                         break
-            cutEnd[i] = zero_end
+            cutEnd[i] = temp_end
 
-        # 删除bad boys
+        # 删除不完整的
         trueIndex = np.where((cutStart == 1) | (cutEnd == 1), False, True)
         biasVTrace = biasVTrace[trueIndex]
         currentTrace = currentTrace[trueIndex]
         condTrace = condTrace[trueIndex]
         cutStart = cutStart[trueIndex]
         cutEnd = cutEnd[trueIndex]
-
         # 再次检查！！！
         if biasVTrace.shape[0] == 0:
             return None, None, None
-
-        max_len = np.max([len(i) for i in biasVTrace])
-        biasVTrace_same_len = [np.pad(trace, (0, max_len - len(trace)), 'edge') for trace in biasVTrace]
-        biasVTrace_same_len = np.array(biasVTrace_same_len)
-        diffBiasTrace = np.concatenate(
-            (np.diff(biasVTrace_same_len),
-             np.array([10.0] * biasVTrace_same_len.shape[0]).reshape(biasVTrace_same_len.shape[0], -1)), axis=1)
-        frontCheckBIdx = np.where(
-            np.isclose(biasVTrace_same_len, bias_base * 2, 0.001) & np.isclose(diffBiasTrace, -bias_base * 2, 0.001),
-            True,
-            False)  # 从0.2 下降到0/0.2的位置的值
-        backCheckFIdx = np.where(
-            np.isclose(biasVTrace_same_len, 0, 0.001) & np.isclose(diffBiasTrace, bias_base * 2, 0.001),
-            True,
-            False)  # 从 0 上升到0.2/0.2的位置的值
-        backCheckBIdx = np.where(
-            np.isclose(biasVTrace_same_len, bias_base * 2, 0.001) & np.isclose(diffBiasTrace, -bias_base, 0.001),
-            True,
-            False)  # 从0.2下降到0.1/0.2的位置的值
-
-        # 此处对原来的程序做改动，此处应该应该对这三个check中的异常值进行删除(同时满足三个检测点)
-        trueIdx = np.apply_along_axis(np.any, 1, frontCheckBIdx) & np.apply_along_axis(np.any, 1,
-                                                                                       backCheckFIdx) & np.apply_along_axis(
-            np.any, 1, backCheckBIdx)
-        """
-        上面的写法，还可以这样写：
-        eg:
-        b=array([[1., 2., 3., 4.],
-                [0., 0., 0., 0.],
-                [0., 0., 0., 0.]])
-        
-        np.any(b,axis=1)
-        Out[61]: array([ True, False, False])
-        
-        即np.any  np.all 都是可以指定axis这个轴参数的
-        """
-        biasVTrace = biasVTrace[trueIdx]
-        currentTrace = currentTrace[trueIdx]
-        condTrace = condTrace[trueIdx]
-        cutStart = cutStart[trueIdx]
-        cutEnd = cutEnd[trueIdx]
-        frontCheckBIdx = frontCheckBIdx[trueIdx]
-        backCheckFIdx = backCheckFIdx[trueIdx]
-        backCheckBIdx = backCheckBIdx[trueIdx]
-
-        # 再次检查！！！
-        if biasVTrace.shape[0] == 0:
-            return None, None, None
-
-        frontCheckB = np.array([np.where(temp)[0][0] for temp in frontCheckBIdx])
-        backCheckF = np.array([np.where(temp)[0][0] for temp in backCheckFIdx])
-        backCheckB = np.array([np.where(temp)[0][0] for temp in backCheckBIdx])
-
-        # 其实这里我担心是有问题的，因为万一frontCheckB[i]-100比100 还小呢。。。。就离谱了
-        condCheckF = np.array([np.mean(condTrace[i][100:frontCheckB[i] - 100]) for i in range(biasVTrace.shape[0])])
-        condCheckB = np.array(
-            [np.mean(condTrace[i][backCheckF[i] + 100:backCheckB[i] - 100]) for i in range(biasVTrace.shape[0])])
 
         # 通过偏压把电导曲线切出来
         # 注意这里的这几个data其中每一行的数据维度都是不一致的！
@@ -287,61 +448,20 @@ class IVDataProcessUtils:
             currentData[i] = currentTrace[i][cutStart[i]:cutEnd[i] + 1]
             condData[i] = condTrace[i][cutStart[i]:cutEnd[i] + 1]
 
-        # 删除超过scanRange的数据
-        # scanRange = keyPara["le_ScanRange"]
-        scanRange = 3000
-
-        trueIdx = [(data <= scanRange).all() for data in biasVData]
-        biasVData = biasVData[trueIdx]
-        currentData = currentData[trueIdx]
-        condData = condData[trueIdx]
-        condCheckB = condCheckB[trueIdx]
-        condCheckF = condCheckF[trueIdx]
-
-        meanCond = (condCheckB + condCheckF) / 2
-        # 再次检查！！！
-        if biasVData.shape[0] == 0:
-            return None, None, None
-
-        # # 整流判定  这个一般是不用开启的！！！
-        # selectRetificate = int(keyPara["le_SelectRetificate"])
-        # if selectRetificate == 0:
-        #     retificationCheckGF = np.zeros(biasVData.shape[0])
-        #     retificationCheckGB = np.zeros(biasVData.shape[0])
-        #     quarterBiasV = round(0.35 * len(biasVTrace[0]))
-        #     if biasVTrace[0][quarterBiasV] < 0:
-        #         for i in range(biasVData.shape[0]):
-        #             retificationCheckGF = np.mean(
-        #                 condData[i][(biasVData >= -scanRange - 0.001) & (biasVData <= -scanRange + 0.001)])
-        #             retificationCheckGB = np.mean(
-        #                 condData[i][(biasVData >= scanRange - 0.001) & (biasVData <= scanRange + 0.001)])
-        #     else:
-        #         for i in range(biasVData.shape[0]):
-        #             retificationCheckGB = np.mean(
-        #                 condData[i][(biasVData >= -scanRange - 0.001) & (biasVData <= -scanRange + 0.001)])
-        #             retificationCheckGF = np.mean(
-        #                 condData[i][(biasVData >= scanRange - 0.001) & (biasVData <= scanRange + 0.001)])
-
-        #     biasVData = np.where(retificationCheckGF >= retificationCheckGB, -biasVData, biasVData)
-        # # 完成整流判定
-        currentData_so = copy.deepcopy(currentData)
+        currentData_so = []
         # 对电流进行处理
         for i in range(currentData.shape[0]):
-            currentData[i] = np.log10(np.abs(currentData[i])) + 6  # 原本mA 放大了e6倍数，单位变为nA
+            currentData_so.append(currentData[i])
+            currentData[i] = np.log10(np.abs(currentData[i])) + 6
             currentData[i] = np.where(currentData[i] == -np.inf, -3, currentData[i])
-
-        # 判断是否处于悬停状态
-        # peakStart = keyPara["le_PeakStart"]
-        # peakEnd = keyPara["le_PeakEnd"]
-
-        trueIdx = np.where(
-            (condCheckB >= peakEnd) & (condCheckB <= peakStart) & (condCheckF >= peakEnd) & (
-                    condCheckF <= peakStart),
-            True, False)
-        currentData = currentData[trueIdx]
-        condData = condData[trueIdx]
-        biasVData = biasVData[trueIdx]
-        currentData_so = currentData_so[trueIdx]
+        # 删除超过scanRange的数据
+        # scanRange = 0.8 + 0.0001
+        # tureIdx = [(data <= scanRange).all() for data in biasVData]
+        # biasVData = biasVData[tureIdx]
+        # currentData = currentData[tureIdx]
+        # condData = condData[tureIdx]
+        meanCond = [data[0] for data in condData]
+        # currentData_so = currentData_so[tureIdx]
 
         # 再次检查！！！
         if biasVData.shape[0] == 0:
@@ -411,7 +531,7 @@ class IVDataProcessUtils:
                     currentDataReve.append(currentData[i][v[0] + a:v[1] + 1 + a])
 
                     condData_i = (currentData[i][v[0] + a:v[1] + 1 + a] -
-                                  np.log10(np.abs(biasVData[i][v[0]:v[1] + 1])) + log_g0 - 1)
+                                  np.log10(np.abs(biasVData[i][v[0]:v[1] + 1]) + 1e-10) + log_g0 - 1)
                     condDataReve.append(condData_i)
                     meanCond_sourceReve.append(meanCond[i])
             else:
@@ -469,7 +589,8 @@ class IVDataProcessUtils:
                 currentData, condData, biasVData, currentData_source, meanCond, de_capicity=bool(de_capicity))
 
             return (biasVDataFor, currentDataFor, condDataFor, biasVDataReve, currentDataReve,
-                    condDataReve, currentData_sourceFor, currentData_sourceReve, meanCond_sourceFor_new, meanCond_sourceReve)
+                    condDataReve, currentData_sourceFor, currentData_sourceReve, meanCond_sourceFor_new,
+                    meanCond_sourceReve)
         except Exception as e:
             # Log the error or handle it in a more appropriate way
             print(f"Function execution failed: {str(e)}")
