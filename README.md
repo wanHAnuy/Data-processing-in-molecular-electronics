@@ -4,13 +4,14 @@
 > some code from:XMe_DataAnalysis
 > https://github.com/Pilab-XMU/XMe_DataAnalysis
 > Python 3.10 ,The package refer to requirements.txt
-# Multiple approach
-> The script invove 3 main data for STM-BJ,and we have developed various tpye ways for classing, clustering,drawing fig,and data processing.
->如果您在论文中使用了本软件，请引用以下文章作为引用来源，该工作首次展示了该软件在分子电子实验数据处理中的应用：
+> >如果您在论文中使用了本软件，请引用以下文章作为引用来源，该工作首次展示了该软件在分子电子实验数据处理中的应用：
+
 Wang, H.; et al. Electrochemical Gating Enables Reversible and High-Performance Molecular Rectification. J. Am. Chem. Soc. 2024, 146, 14, 10020–10028. https://doi.org/10.1021/jacs.4c13773
 > If you use this software in your work, please cite the following article, which first demonstrated its application in single-molecule electronic data processing:
 
 Wang, H.; et al. Electrochemical Gating Enables Reversible and High-Performance Molecular Rectification. J. Am. Chem. Soc. 2024, 146 (14), 10020–10028. https://doi.org/10.1021/jacs.4c13773
+# Multiple approach
+> The script invove 3 main data for STM-BJ,and we have developed various tpye ways for classing, clustering,drawing fig,and data processing.
 
 This software has contributed to multiple top-tier publications within our research group. Proper citation is appreciated.
 ![the icon](https://github.com/wanHAnuy/wanHAnuy/blob/main/fig1.png)
